@@ -1,7 +1,7 @@
 // 설계 참고: DESIGN.md §7 — 통합 시트(색칠)와 요약 시트(COUNTIF 수식)가 담긴 엑셀 파일 만들기
 
 import ExcelJS from 'exceljs';
-import { COLORS, SHEET_NAMES } from './constants';
+import { COLORS, MAX_FORMULA_TEXT_LENGTH, SHEET_NAMES } from './constants';
 import { deptLabel, summarize, summarizeByDept, type MergeResult } from './merge';
 import { COURSE_FILL, OVERALL_FILL } from './statusColors';
 
@@ -111,7 +111,13 @@ export function buildWorkbook(result: MergeResult): ExcelJS.Workbook {
   for (const d of depts) {
     // COUNTIF는 부서 이름 속 * ? ~ 를 특수문자로 읽어 이름에 따라 엉뚱하게 세므로(실제 엑셀에서 확인),
     // 글자 그대로 비교하는 SUMPRODUCT + "=" 비교를 쓴다. 따옴표만 ""로 바꿔 적으면 된다.
-    const name = `"${d.dept.replace(/"/g, '""')}"`;
+    const escaped = d.dept.replace(/"/g, '""');
+    // 엑셀 수식 안의 글자는 255자까지만 쓸 수 있다. 너무 긴 부서 이름은 수식 대신 계산된 숫자를 그대로 적는다.
+    if (escaped.length > MAX_FORMULA_TEXT_LENGTH) {
+      summary.addRow([d.dept, d.total, d.completed, d.notCompleted, d.needsCheck]);
+      continue;
+    }
+    const name = `"${escaped}"`;
     const inDept = `--(${deptRange}=${name})`;
     summary.addRow([
       d.dept,

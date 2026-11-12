@@ -59,7 +59,8 @@ export function mergeCourses(input: readonly CourseFile[]): MergeResult {
   // ③ 직원마다 교육 칸 판정 → 전체 판정
   const rows: MergedRow[] = [];
   for (const emp of employees.values()) {
-    const cells: MergedRow['courses'] = {};
+    // 교육 이름이 "__proto__" 같은 특별한 이름이어도 칸이 사라지지 않도록, 기본 속성이 없는 빈 객체를 쓴다
+    const cells: MergedRow['courses'] = Object.create(null);
     for (const { courseName, map } of byCourse) {
       cells[courseName] = judgeCourseCell(map.get(emp.empNo) ?? []);
     }
