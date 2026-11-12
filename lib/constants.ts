@@ -50,5 +50,8 @@ export const COLORS = {
   header: 'FFF2F2F2',
 } as const;
 
+/** 부서 칸이 비어 있을 때 결과 엑셀에 적는 이름 (부서별 요약에서 한 묶음으로 세기 위해) */
+export const NO_DEPT_LABEL = '(부서 없음)';
+
 /** 결과 엑셀 시트 이름 */
 export const SHEET_NAMES = { merged: '통합', summary: '요약' } as const;

@@ -2,7 +2,7 @@
 
 import ExcelJS from 'exceljs';
 import { COLORS, SHEET_NAMES } from './constants';
-import { summarize, type MergeResult } from './merge';
+import { deptLabel, summarize, summarizeByDept, type MergeResult } from './merge';
 import type { CourseStatus, OverallStatus } from './types';
 
 /** 교육 칸 판정 → 배경색 (DESIGN.md §4.2). 수료는 색 없음 */
@@ -51,7 +51,7 @@ export function buildWorkbook(result: MergeResult): ExcelJS.Workbook {
     const excelRow = merged.addRow([
       row.empNo,
       row.name,
-      row.dept,
+      deptLabel(row.dept),
       ...courseNames.map((c) => row.courses[c]),
       row.overall,
     ]);
@@ -107,9 +107,53 @@ export function buildWorkbook(result: MergeResult): ExcelJS.Workbook {
   summary.addRow(['일치 여부', { formula: 'IF(B6=B7,"일치","불일치")', result: s.total === s.targets ? '일치' : '불일치' }]);
 
   summary.getRow(6).font = { bold: true };
+
+  // ── 부서별 요약 (FR-11): 부서 │ 인원 │ 수료 │ 미수료 │ 확인 필요 ──────────────
+  const depts = summarizeByDept(rows);
+  const deptRange = `'${SHEET_NAMES.merged}'!$C$2:$C$${lastRow}`;
+  summary.addRow([]);
+  const title = summary.addRow(['부서별 요약']);
+  title.font = { bold: true, size: 12 };
+  const deptHead = summary.addRow(['부서', '인원', '수료', '미수료', '확인 필요']);
+  deptHead.font = { bold: true };
+  deptHead.eachCell((cell) => {
+    cell.fill = fillOf(COLORS.header)!;
+    cell.border = { bottom: { style: 'thin' } };
+  });
+
+  const firstDeptRow = deptHead.number + 1;
+  for (const d of depts) {
+    // COUNTIF는 부서 이름 속 * ? ~ 를 특수문자로 읽어 이름에 따라 엉뚱하게 세므로(실제 엑셀에서 확인),
+    // 글자 그대로 비교하는 SUMPRODUCT + "=" 비교를 쓴다. 따옴표만 ""로 바꿔 적으면 된다.
+    const name = `"${d.dept.replace(/"/g, '""')}"`;
+    const inDept = `--(${deptRange}=${name})`;
+    summary.addRow([
+      d.dept,
+      { formula: `SUMPRODUCT(${inDept})`, result: d.total },
+      { formula: `SUMPRODUCT(${inDept},--(${overallRange}="수료"))`, result: d.completed },
+      // "미수료"와 "미수료(교육기록 미흡)"를 함께 세기 위해 앞 3글자가 "미수료"인지 본다
+      { formula: `SUMPRODUCT(${inDept},--(LEFT(${overallRange},3)="미수료"))`, result: d.notCompleted },
+      { formula: `SUMPRODUCT(${inDept},--(${overallRange}="확인 필요"))`, result: d.needsCheck },
+    ]);
+  }
+  const lastDeptRow = firstDeptRow + depts.length - 1;
+  if (depts.length > 0) {
+    const sum = (col: string, key: 'total' | 'completed' | 'notCompleted' | 'needsCheck') => ({
+      formula: `SUM(${col}${firstDeptRow}:${col}${lastDeptRow})`,
+      result: depts.reduce((acc, d) => acc + d[key], 0),
+    });
+    const totalRow = summary.addRow(['합계', sum('B', 'total'), sum('C', 'completed'), sum('D', 'notCompleted'), sum('E', 'needsCheck')]);
+    totalRow.font = { bold: true };
+    totalRow.eachCell((cell) => {
+      cell.border = { top: { style: 'thin' } };
+    });
+  }
+
   summary.getColumn(1).width = 26;
-  summary.getColumn(2).width = 12;
-  summary.getColumn(2).alignment = { horizontal: 'right' };
+  for (const col of [2, 3, 4, 5]) {
+    summary.getColumn(col).width = 12;
+    summary.getColumn(col).alignment = { horizontal: 'right' };
+  }
 
   return wb;
 }

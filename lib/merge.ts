@@ -1,5 +1,6 @@
 // 설계 참고: DESIGN.md §2.2 ⑤~⑦, D-4 — 교육 파일들을 사번 기준으로 합쳐 직원 한 명당 한 줄로 만들기
 
+import { NO_DEPT_LABEL } from './constants';
 import { judgeCourseCell, judgeOverall } from './judge';
 import type { CourseFile, CourseRecord, Employee, MergedRow, OverallStatus } from './types';
 
@@ -68,6 +69,45 @@ export type Summary = {
   /** 대상자 수 (고유 사번 수). 합계와 다르면 E08 */
   targets: number;
 };
+
+/** 부서 한 곳의 인원 집계 (DESIGN.md §7.2 부서별 요약, FR-11) */
+export type DeptSummary = {
+  /** 결과 엑셀에 적는 부서 이름 (비어 있으면 "(부서 없음)") */
+  dept: string;
+  total: number;
+  completed: number;
+  /** 미수료 ("미수료" + "미수료(교육기록 미흡)") */
+  notCompleted: number;
+  needsCheck: number;
+};
+
+/** 결과 엑셀에 적는 부서 이름: 앞뒤 공백을 지우고, 비어 있으면 "(부서 없음)" */
+export function deptLabel(dept: string): string {
+  const trimmed = dept.trim();
+  return trimmed === '' ? NO_DEPT_LABEL : trimmed;
+}
+
+/**
+ * 부서별로 인원을 센다. 부서는 대상자에 처음 나온 순서대로 보여준다.
+ * 엑셀의 COUNTIF가 대소문자를 구분하지 않으므로, 대소문자만 다른 부서("HR"과 "hr")는 같은 부서로 묶는다.
+ */
+export function summarizeByDept(rows: readonly MergedRow[]): DeptSummary[] {
+  const groups = new Map<string, DeptSummary>();
+  for (const row of rows) {
+    const label = deptLabel(row.dept);
+    const key = label.toLowerCase();
+    let g = groups.get(key);
+    if (!g) {
+      g = { dept: label, total: 0, completed: 0, notCompleted: 0, needsCheck: 0 };
+      groups.set(key, g);
+    }
+    g.total++;
+    if (row.overall === '수료') g.completed++;
+    else if (row.overall === '확인 필요') g.needsCheck++;
+    else g.notCompleted++;
+  }
+  return [...groups.values()];
+}
 
 export function summarize(rows: readonly MergedRow[]): Summary {
   const count = (s: OverallStatus) => rows.filter((r) => r.overall === s).length;
