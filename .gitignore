@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 삭제 대기 파일 (사용자가 직접 확인 후 삭제)
+/trash-can/
+
+# 사용자가 준 샘플 엑셀 (Git에 올리지 않음)
+/samples/user/
