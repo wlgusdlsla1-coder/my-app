@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { detectColumns, findColumn, isMappingComplete } from '../detectColumns';
-import { extractCourse, extractRoster, readSheet } from '../readExcel';
+import { extractCourse, readSheet } from '../readExcel';
 import { checkCourseFiles, checkFile, courseNameFromFile } from '../validateFiles';
 
 const SAMPLES = path.resolve(__dirname, '..', '..', 'samples');
@@ -45,9 +45,9 @@ describe('파일 검사 (E01·E02·E03·E06)', () => {
 });
 
 describe('열 자동 찾기', () => {
-  it('"직원번호", "이수여부"를 사번·수료 여부로 인식 (DESIGN §10.2-13)', () => {
-    const r = detectColumns(['직원번호', '성명', '이수여부'], 'course');
-    expect(r.mapping).toEqual({ empNo: 0, name: 1, status: 2 });
+  it('"직원번호", "소속", "이수여부"를 사번·부서·수료 여부로 인식 (DESIGN §10.2-13)', () => {
+    const r = detectColumns(['직원번호', '성명', '소속', '이수여부']);
+    expect(r.mapping).toEqual({ empNo: 0, name: 1, dept: 2, status: 3 });
     expect(r.missing).toEqual([]);
   });
 
@@ -61,9 +61,10 @@ describe('열 자동 찾기', () => {
   });
 
   it('"직원ID", "진행상태"는 인식하지 않고 열 고르기로 넘김', () => {
-    const r = detectColumns(['직원ID', '성명', '진행상태'], 'course');
+    const r = detectColumns(['직원ID', '성명', '소속부서', '진행상태']);
     expect(r.missing).toEqual(['empNo', 'status']);
-    expect(isMappingComplete(r.mapping, 'course')).toBe(false);
+    expect(isMappingComplete(r.mapping)).toBe(false);
+    expect(isMappingComplete({ ...r.mapping, empNo: 0, status: 3 })).toBe(true);
   });
 
   it('부서와 팀이 함께 있으면 부서를 고름', () => {
@@ -72,19 +73,20 @@ describe('열 자동 찾기', () => {
 });
 
 describe('엑셀 읽기 — 가짜 데이터(samples/basic)', () => {
-  it('직원 명단: 사번·성명·부서명 인식, 30명, 앞자리 0 유지', async () => {
-    const sheet = await readSheet(load('basic', '직원명단.xlsx'));
-    const { mapping, missing } = detectColumns(sheet.headers, 'roster');
+  it('기본형 교육 파일: 네 열 인식, 30명, 앞자리 0 유지', async () => {
+    const sheet = await readSheet(load('basic', '성희롱예방교육.xlsx'));
+    const { mapping, missing } = detectColumns(sheet.headers);
     expect(missing).toEqual([]);
-    const emps = extractRoster(sheet, mapping);
-    expect(emps).toHaveLength(30);
-    expect(emps.map((e) => e.empNo)).toContain('00123');
+    const course = extractCourse(sheet, mapping, '성희롱예방교육');
+    expect(course.records).toHaveLength(30);
+    expect(course.records.map((r) => r.empNo)).toContain('00123');
+    expect(course.records[0]).toMatchObject({ empNo: 'A001', dept: '인사팀', raw: '수료' });
   });
 
   it('위에 안내 줄이 있어도 제목 줄을 찾고, 사번·값의 앞뒤 공백을 지움', async () => {
     const sheet = await readSheet(load('basic', '개인정보보호교육.xlsx'));
-    expect(sheet.headers).toEqual(['직원번호', '성명', '이수여부']);
-    const { mapping } = detectColumns(sheet.headers, 'course');
+    expect(sheet.headers).toEqual(['직원번호', '성명', '소속', '이수여부']);
+    const { mapping } = detectColumns(sheet.headers);
     const course = extractCourse(sheet, mapping, '개인정보보호교육');
     expect(course.records).toHaveLength(30);
     const a005 = course.records.find((r) => r.empNo === 'A005');
@@ -103,22 +105,23 @@ const USER_COURSE = '고용노동부와_보건복지부가_함께하는_장애�
 const hasUserSample = existsSync(path.join(SAMPLES, 'user', USER_COURSE));
 
 describe.skipIf(!hasUserSample)('엑셀 읽기 — 사용자 샘플(samples/user)', () => {
-  it('실제 교육 플랫폼 양식(12열)에서 사번·성명·수료여부를 자동 인식', async () => {
+  it('실제 교육 플랫폼 양식(12열)에서 사번·성명·부서·수료여부를 자동 인식 (팀 열이 아니라 부서 열)', async () => {
     const sheet = await readSheet(load('user', USER_COURSE));
-    const { mapping, missing } = detectColumns(sheet.headers, 'course');
+    const { mapping, missing } = detectColumns(sheet.headers);
     expect(missing).toEqual([]);
     expect(sheet.headers[mapping.empNo!]).toBe('사번');
-    expect(sheet.headers[mapping.status!]).toBe('수료여부');
     expect(sheet.headers[mapping.name!]).toBe('성명');
+    expect(sheet.headers[mapping.dept!]).toBe('부서');
+    expect(sheet.headers[mapping.status!]).toBe('수료여부');
   });
 
   it('번호만 채워진 빈 줄 2천여 개는 건너뛰고, 사번 앞자리 0을 유지', async () => {
     const sheet = await readSheet(load('user', USER_COURSE));
-    const { mapping } = detectColumns(sheet.headers, 'course');
+    const { mapping } = detectColumns(sheet.headers);
     const course = extractCourse(sheet, mapping, '장애인인식개선교육');
     expect(course.records).toEqual([
-      { empNo: '123456', name: '홍길동', raw: '수료' },
-      { empNo: '024567', name: '김치만두', raw: '수료' },
+      { empNo: '123456', name: '홍길동', dept: '서울지역본부', raw: '수료' },
+      { empNo: '024567', name: '김치만두', dept: '국유재산관리처', raw: '수료' },
     ]);
   });
 });

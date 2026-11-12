@@ -4,7 +4,7 @@
 import ExcelJS from 'exceljs';
 import { HEADER_SEARCH_ROWS } from './constants';
 import { findColumn } from './detectColumns';
-import type { ColumnMapping, CourseFile, Employee, RawSheet } from './types';
+import type { ColumnMapping, CourseFile, RawSheet } from './types';
 
 /** 엑셀 파일을 열 수 없을 때 (암호, 손상 등) — E04 */
 export class ExcelReadError extends Error {
@@ -78,31 +78,20 @@ export async function readSheet(data: ArrayBuffer): Promise<RawSheet> {
   return { headers, rows };
 }
 
-/** 정해진 열 위치로 직원 명단을 뽑아낸다. 사번이 빈 줄은 건너뛴다 */
-export function extractRoster(sheet: RawSheet, mapping: ColumnMapping): Employee[] {
-  const { empNo, name, dept } = mapping;
-  if (empNo === undefined || name === undefined || dept === undefined) {
-    throw new Error('직원 명단의 사번·이름·부서 열이 모두 정해져야 해요.');
-  }
-  return sheet.rows
-    .map((r) => ({
-      empNo: normalizeEmpNo(r[empNo] ?? ''),
-      name: (r[name] ?? '').trim(),
-      dept: (r[dept] ?? '').trim(),
-    }))
-    .filter((e) => e.empNo !== '');
-}
-
-/** 정해진 열 위치로 교육 파일 한 개의 기록을 뽑아낸다. 사번이 빈 줄은 건너뛴다 */
+/**
+ * 정해진 열 위치로 교육 파일 한 개의 기록을 뽑아낸다. 사번이 빈 줄은 건너뛴다.
+ * 사번·이름·부서·수료 여부 네 열만 남기고 나머지 열은 버린다 (PRD 7번)
+ */
 export function extractCourse(sheet: RawSheet, mapping: ColumnMapping, courseName: string): CourseFile {
-  const { empNo, status, name } = mapping;
-  if (empNo === undefined || status === undefined) {
-    throw new Error('교육 파일의 사번·수료 여부 열이 모두 정해져야 해요.');
+  const { empNo, name, dept, status } = mapping;
+  if (empNo === undefined || name === undefined || dept === undefined || status === undefined) {
+    throw new Error('교육 파일의 사번·이름·부서·수료 여부 열이 모두 정해져야 해요.');
   }
   const records = sheet.rows
     .map((r) => ({
       empNo: normalizeEmpNo(r[empNo] ?? ''),
-      ...(name !== undefined ? { name: (r[name] ?? '').trim() } : {}),
+      name: (r[name] ?? '').trim(),
+      dept: (r[dept] ?? '').trim(),
       raw: (r[status] ?? '').trim(),
     }))
     .filter((rec) => rec.empNo !== '');

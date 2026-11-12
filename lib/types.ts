@@ -1,6 +1,9 @@
 // 설계 참고: DESIGN.md §4.1 — 앱 전체에서 쓰는 데이터 모양
 
-/** 직원 명단의 한 사람 */
+/**
+ * 대상자 한 사람.
+ * 직원 명단 파일은 없고, 교육 파일들에 한 번이라도 나온 사번 전체가 대상자다 (DESIGN.md D-4)
+ */
 export type Employee = {
   /** 사번 (앞뒤 공백 제거, 글자로 통일. 앞자리 0은 지우지 않는다) */
   empNo: string;
@@ -19,8 +22,8 @@ export type OverallStatus = '수료' | '미수료' | '미수료(교육기록 미
 /** 교육 파일 안의 한 줄 */
 export type CourseRecord = {
   empNo: string;
-  /** 교육 파일에 이름 열이 있을 때만 들어간다 (이름 불일치 확인용, D-3) */
-  name?: string;
+  name: string;
+  dept: string;
   /** 원본 수료 여부 값 (앞뒤 공백만 지운 상태) */
   raw: string;
 };
@@ -34,18 +37,13 @@ export type CourseFile = {
 
 /** 통합 시트의 한 줄 */
 export type MergedRow = Employee & {
-  courses: Record<string, { status: CourseStatus; nameMismatch?: string }>;
+  /** 교육 이름 → 그 교육 칸의 판정 */
+  courses: Record<string, CourseStatus>;
   overall: OverallStatus;
 };
 
-/** 직원 명단에 없는 사번 (통합 시트 맨 아래 "확인 필요" 모음) */
-export type UnmatchedRow = { empNo: string; name?: string; courseName: string };
-
 /** 열 찾기 대상 */
 export type Field = 'empNo' | 'name' | 'dept' | 'status';
-
-/** 파일 종류: 직원 명단 또는 교육 파일 */
-export type FileKind = 'roster' | 'course';
 
 /** 각 열이 몇 번째 칸(0부터)인지 */
 export type ColumnMapping = Partial<Record<Field, number>>;
@@ -61,5 +59,5 @@ export type RawSheet = {
   rows: string[][];
 };
 
-/** 오류 코드 (DESIGN.md §8) */
-export type ErrorCode = 'E01' | 'E02' | 'E03' | 'E04' | 'E05' | 'E06' | 'E07' | 'E08';
+/** 오류 코드 (DESIGN.md §8). E07은 직원 명단 파일이 없어져 쓰지 않는다 */
+export type ErrorCode = 'E01' | 'E02' | 'E03' | 'E04' | 'E05' | 'E06' | 'E08';

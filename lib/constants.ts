@@ -2,7 +2,7 @@
 
 import type { Field } from './types';
 
-/** 교육 파일 최대 개수 (PRD 5번: 직원 명단 1개 + 교육 파일 최대 20개) */
+/** 교육 파일 최대 개수 (PRD 5번). 직원 명단 파일은 받지 않는다 */
 export const MAX_COURSE_FILES = 20;
 
 /** 파일 1개당 최대 용량: 10MB */
@@ -31,11 +31,8 @@ export const COLUMN_SYNONYMS: Record<Field, string[]> = {
  */
 export const CONTAINS_MATCH_MIN_LENGTH = 3;
 
-/** 파일 종류별 꼭 있어야 하는 열 */
-export const REQUIRED_FIELDS = {
-  roster: ['empNo', 'name', 'dept'],
-  course: ['empNo', 'status'],
-} as const satisfies Record<string, readonly Field[]>;
+/** 교육 파일에 꼭 있어야 하는 열. 교육 파일이 직원 명단 역할도 하므로 이름·부서도 필요하다 */
+export const REQUIRED_FIELDS: readonly Field[] = ['empNo', 'name', 'dept', 'status'];
 
 /** 원본 수료 여부 값 (PRD 5번) */
 export const RAW_COMPLETED = '수료';
