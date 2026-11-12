@@ -45,3 +45,7 @@ next-env.d.ts
 
 # 사용자가 준 샘플 엑셀 (Git에 올리지 않음)
 /samples/user/
+
+# 작업 도구 기록과 개인 설정 (올리지 않음)
+/.bkit/
+/.claude/

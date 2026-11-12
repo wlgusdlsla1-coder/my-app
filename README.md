@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 의무교육 수료관리 도우미
 
-## Getting Started
+교육 플랫폼에서 내려받은 **교육별 수료 결과 엑셀(최대 20개)을 한 번에 올리면**, 사번 기준으로 합쳐서 직원별 수료 현황을 정리해 주는 웹 앱이에요.
 
-First, run the development server:
+> 라이브 사이트: https://my-app-alpha-blush.vercel.app
+
+## 왜 만들었나요
+
+법정의무교육 담당자는 교육마다 따로 내려받은 엑셀 여러 개를 손으로 합쳐서 "누가 어떤 교육을 안 들었는지"를 확인해요. 이 작업은 약 30분이 걸리고, 열 이름이나 사번 형식이 달라서 누락·실수가 생기기 쉬워요. 이 앱은 그 과정을 **업로드 한 번, 2초 안쪽**으로 줄여요.
+
+## 무엇을 해 주나요
+
+1. **교육별 엑셀 올리기** — `.xlsx` 파일 최대 20개, 개당 10MB 이하. 끌어다 놓거나 클릭해서 고를 수 있어요.
+2. **열 자동 찾기** — `사번`, `이름`, `부서`, `수료여부` 열을 비슷한 이름(예: `직원번호`, `성명`, `이수여부`)으로 찾아요. 못 찾은 파일만 직접 고르게 해요.
+3. **사번 기준으로 합치기** — 교육 파일에 한 번이라도 나온 사번 전체가 대상자예요. 직원 명단 파일은 따로 필요 없어요.
+4. **수료 판정**
+   - 교육 칸: `수료` / `미수료`(원본 값이 "수강") / `교육 기록 없음` / `확인 필요`
+   - 전체: `수료` / `미수료` / `미수료(교육기록 미흡)` / `확인 필요`
+5. **결과 확인과 내려받기** — 화면에서 미리 보고, 엑셀로 내려받아요.
+   - **통합 시트:** 직원 한 명당 한 줄, 미수료는 빨강·교육 기록 없음은 노랑·확인 필요는 회색으로 칠해요.
+   - **요약 시트:** 전체 수료/미수료/확인 필요 인원과 부서별 표를 엑셀 수식으로 통합 시트와 연결해요.
+
+사번 칸이 빈 줄은 버리지 않고 `알수없음1`, `알수없음2` …로 붙여서 한 사람으로 세요.
+
+## 개인정보는 어떻게 다루나요
+
+- 올린 엑셀은 **내 PC의 브라우저 안에서만** 읽고 처리해요. 서버로 보내거나 저장하지 않아요.
+- 서버 코드(API), 데이터베이스, 로그인, 외부 AI 호출이 없어요.
+- 브라우저의 보안 규칙(CSP)이 이 사이트에서 다른 주소로 데이터를 보내는 연결을 막아 줘요.
+- 이 저장소의 `samples/`에는 **가짜(지어낸) 데이터**만 있어요. 실제 직원 데이터는 올리지 않았어요.
+
+## 직접 실행해 보기
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev     # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`samples/basic/` 폴더의 가짜 엑셀 4개를 올리면 바로 써 볼 수 있어요. (`산업안전보건교육.xlsx`는 열 제목이 달라서 열 고르기 창을 거쳐요.)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| 명령 | 하는 일 |
+|---|---|
+| `npm run dev` | 개발 서버 실행 |
+| `npm run build` | 배포용 빌드 |
+| `npm run lint` | 코드 검사 |
+| `npm test` | 자동 검사(판정 규칙·엑셀 결과 확인) |
+| `npm run samples` | 가짜 엑셀 다시 만들기 (`samples/basic`, `samples/full`) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 기술
 
-## Learn More
+- [Next.js](https://nextjs.org) 16 (App Router) · React 19 · TypeScript · Tailwind CSS
+- [ExcelJS](https://github.com/exceljs/exceljs) — 브라우저에서 엑셀 읽기·쓰기
+- [Vitest](https://vitest.dev) — 자동 검사
+- [Vercel](https://vercel.com) — 배포
 
-To learn more about Next.js, take a look at the following resources:
+## 폴더 구조
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| 경로 | 설명 |
+|---|---|
+| `app/` | 화면 (`components/Workspace.tsx`가 전체 흐름) |
+| `lib/` | 판정 규칙과 엑셀 처리 (`judge.ts`, `merge.ts`, `readExcel.ts`, `buildWorkbook.ts` …) |
+| `lib/__tests__/` | 자동 검사 |
+| `samples/` | 가짜 엑셀 데이터와 정답표 |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 문서
 
-## Deploy on Vercel
+| 문서 | 내용 |
+|---|---|
+| [PRD.md](PRD.md) | 기획서: 문제 정의, 목표, 기능, 범위, 보안 |
+| [PLAN.md](PLAN.md) | 계획서: 성공 기준, 작업 순서, 검증 결과 |
+| [DESIGN.md](DESIGN.md) | 설계서: 화면, 데이터 흐름, 판정 규칙 |
+| [CHECK.md](CHECK.md) | 점검 결과: 성공 기준 판정, 설계와 코드 차이, 보안 점검 |
+| [DEPLOY.md](DEPLOY.md) | 배포 안내 |
+| [CLAUDE.md](CLAUDE.md) | AI 도우미와 함께 일하는 규칙 |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 알려 둘 점
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 교육 플랫폼에서 받은 파일 양식(첫 줄이 제목, 첫 번째 시트에 데이터, 사번은 텍스트로 저장된 6자리 숫자)을 기준으로 만들었어요. 이 가정이 깨지는 파일은 따로 검토가 필요해요. (자세히: `DESIGN.md` 0.1절)
+- 아주 큰 엑셀(수십 MB)은 쓰지 않는다고 가정해서 행·열 수 제한은 두지 않았어요.
