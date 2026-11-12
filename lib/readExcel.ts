@@ -79,7 +79,10 @@ export async function readSheet(data: ArrayBuffer): Promise<RawSheet> {
 }
 
 /**
- * 정해진 열 위치로 교육 파일 한 개의 기록을 뽑아낸다. 사번이 빈 줄은 건너뛴다.
+ * 정해진 열 위치로 교육 파일 한 개의 기록을 뽑아낸다.
+ * - 사번·이름·부서·수료 여부 네 열이 **모두 비어 있는 줄**(번호만 채워진 빈 줄 등)은 건너뛴다.
+ * - 사번만 비어 있고 다른 칸에 값이 있는 줄은 **버리지 않고** 사번을 빈 글자로 둔다.
+ *   그 줄에 "알수없음1", "알수없음2" 같은 이름표를 붙이는 일은 파일 전체를 알고 있는 mergeCourses가 한다 (DESIGN.md D-5).
  * 사번·이름·부서·수료 여부 네 열만 남기고 나머지 열은 버린다 (PRD 7번)
  */
 export function extractCourse(sheet: RawSheet, mapping: ColumnMapping, courseName: string): CourseFile {
@@ -94,6 +97,6 @@ export function extractCourse(sheet: RawSheet, mapping: ColumnMapping, courseNam
       dept: (r[dept] ?? '').trim(),
       raw: (r[status] ?? '').trim(),
     }))
-    .filter((rec) => rec.empNo !== '');
+    .filter((rec) => rec.empNo !== '' || rec.name !== '' || rec.dept !== '' || rec.raw !== '');
   return { courseName, records };
 }

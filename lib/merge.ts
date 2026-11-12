@@ -1,6 +1,6 @@
 // 설계 참고: DESIGN.md §2.2 ⑤~⑦, D-4 — 교육 파일들을 사번 기준으로 합쳐 직원 한 명당 한 줄로 만들기
 
-import { NO_DEPT_LABEL } from './constants';
+import { NO_DEPT_LABEL, UNKNOWN_EMP_PREFIX } from './constants';
 import { judgeCourseCell, judgeOverall } from './judge';
 import type { CourseFile, CourseRecord, Employee, MergedRow, OverallStatus } from './types';
 
@@ -12,13 +12,28 @@ export type MergeResult = {
 };
 
 /**
+ * 사번 칸이 빈 줄에 "알수없음1", "알수없음2" … 이름표를 붙인다 (DESIGN.md D-5).
+ * - 사번이 없어서 같은 사람인지 알 수 없으므로 **빈 줄 하나가 곧 한 사람**이다.
+ * - 번호는 올린 파일 순서와 줄 순서대로 매기고, 파일이 달라도 겹치지 않게 **전체에서 하나씩** 늘린다.
+ *   (파일마다 1부터 매기면 서로 다른 파일의 "알수없음1"이 같은 사람으로 합쳐진다.)
+ */
+function labelUnknownEmpNos(courses: readonly CourseFile[]): CourseFile[] {
+  let count = 0;
+  return courses.map((course) => ({
+    ...course,
+    records: course.records.map((rec) => (rec.empNo === '' ? { ...rec, empNo: `${UNKNOWN_EMP_PREFIX}${++count}` } : rec)),
+  }));
+}
+
+/**
  * 교육 파일들을 사번 기준으로 합친다.
  * - 직원 명단 파일은 없다. 교육 파일에 한 번이라도 나온 사번 전체가 대상자다 (D-4)
  * - 줄 순서와 이름·부서는 처음 나온 것을 쓴다 (이름·부서는 파일마다 같다)
  * - 사번은 읽을 때 이미 앞뒤 공백을 지웠으므로 그대로 비교한다 (앞자리 0 유지)
  */
-export function mergeCourses(courses: readonly CourseFile[]): MergeResult {
-  if (courses.length === 0) throw new Error('교육 파일이 1개 이상 있어야 해요.');
+export function mergeCourses(input: readonly CourseFile[]): MergeResult {
+  if (input.length === 0) throw new Error('교육 파일이 1개 이상 있어야 해요.');
+  const courses = labelUnknownEmpNos(input);
 
   // ① 대상자 목록: 올린 순서대로 파일을 훑으며 처음 나온 사번을 차례로 모은다
   const employees = new Map<string, Employee>();

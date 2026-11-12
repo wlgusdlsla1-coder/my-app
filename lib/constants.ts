@@ -50,6 +50,9 @@ export const COLORS = {
   header: 'FFF2F2F2',
 } as const;
 
+/** 사번 칸이 빈 줄에 붙이는 이름표의 앞부분 (알수없음1, 알수없음2 …) — DESIGN.md D-5 */
+export const UNKNOWN_EMP_PREFIX = '알수없음';
+
 /** 부서 칸이 비어 있을 때 결과 엑셀에 적는 이름 (부서별 요약에서 한 묶음으로 세기 위해) */
 export const NO_DEPT_LABEL = '(부서 없음)';
 
