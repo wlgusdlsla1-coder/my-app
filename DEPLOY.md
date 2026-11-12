@@ -35,7 +35,11 @@ curl -s -H "Authorization: Bearer $VERCEL_TOKEN" "https://api.vercel.com/v6/depl
 | Vercel CLI | ✅ 프로젝트 안에 설치됨 (`npx vercel`) |
 | Vercel 토큰 | ✅ `.env`의 `VERCEL_TOKEN`으로 로그인 확인 (값은 어디에도 출력하지 않음) |
 | Vercel 프로젝트 연결 | ✅ `my-app` 프로젝트가 만들어짐 (`.vercel/`, 커밋 안 됨) |
-| 첫 배포 | ⚠ 2026-11-12 실행됨. 공개 주소로 만들어졌고, `.env`가 함께 올라가는 문제가 있어 처리 중 |
+| 배포 | ✅ 2026-11-12 재배포 완료 → https://my-app-alpha-blush.vercel.app (처음 배포는 `.env`가 함께 올라가서 삭제하고 다시 올림) |
+| 올라간 파일 확인 | ✅ 소스 45개, `.env`·`samples/`·기획 문서 등 없음 (Vercel API로 확인) |
+| 배포된 주소에서 전체 흐름 | ✅ 가짜 파일 2개로 올리기 → 정리하기 → 미리보기 확인, 네트워크에는 화면 파일을 받는 GET 요청뿐 |
+| 공개 범위 | ⚠ 대표 주소는 로그인 없이 열림 (배포별 임시 주소만 로그인 필요). 접근 제한은 아직 정하지 않음 |
+| 토큰 교체 | ⬜ 처음 배포에서 `.env`가 한 번 올라갔으므로 GitHub·Supabase·Vercel·OpenAI 토큰 교체 권장 (직접 발급 필요) |
 | 환경 변수 | 필요 없음 (외부 서비스를 쓰지 않아요) |
 
 ## 4. 배포 방법
