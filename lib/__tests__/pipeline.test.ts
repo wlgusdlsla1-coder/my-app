@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { errorMessage } from '../messages';
-import { applyMapping, canProcess, readCourseEntry } from '../pipeline';
+import { applyMapping, canProcess, dropSheet, readCourseEntry } from '../pipeline';
 
 const SAMPLES = path.resolve(__dirname, '..', '..', 'samples', 'basic');
 
@@ -57,6 +57,41 @@ describe('applyMapping', () => {
   it('열이 덜 정해졌으면 그대로 둠', async () => {
     const e = await readCourseEntry('2', '산업안전보건교육.xlsx', load('산업안전보건교육.xlsx'));
     expect(applyMapping(e, { empNo: 0 })).toBe(e);
+  });
+});
+
+describe('dropSheet (열 고르기 취소 뒤 읽어 둔 표 버리기)', () => {
+  it('표만 버리고 칸은 "열 고르기 필요"로 남김. 자동으로 찾은 열과 안내 문구는 유지', async () => {
+    const e = await readCourseEntry('2', '산업안전보건교육.xlsx', load('산업안전보건교육.xlsx'));
+    expect(e.sheet).toBeDefined();
+    const dropped = dropSheet(e);
+    expect(dropped.sheet).toBeUndefined();
+    expect(dropped.status).toBe('needsColumns');
+    expect(dropped.mapping).toEqual(e.mapping);
+    expect(dropped.error).toBe(e.error);
+    expect(dropped.fileName).toBe(e.fileName);
+    expect(canProcess([dropped])).toBe(false);
+  });
+
+  it('다시 읽으면 같은 제목과 자동 인식 결과가 돌아옴 (취소 뒤 [열 고르기]를 다시 눌렀을 때)', async () => {
+    const first = await readCourseEntry('2', '산업안전보건교육.xlsx', load('산업안전보건교육.xlsx'));
+    const again = await readCourseEntry('2', '산업안전보건교육.xlsx', load('산업안전보건교육.xlsx'));
+    expect(again.sheet?.headers).toEqual(first.sheet?.headers);
+    expect(again.mapping).toEqual(first.mapping);
+  });
+
+  it('표가 없거나 준비된 칸은 그대로 돌려줌', async () => {
+    const ready = await readCourseEntry('1', '성희롱예방교육.xlsx', load('성희롱예방교육.xlsx'));
+    expect(dropSheet(ready)).toBe(ready);
+    const needs = await readCourseEntry('2', '산업안전보건교육.xlsx', load('산업안전보건교육.xlsx'));
+    const dropped = dropSheet(needs);
+    expect(dropSheet(dropped)).toBe(dropped);
+  });
+
+  it('표를 버린 칸에는 열 고르기를 마쳐도 적용되지 않음 (표가 있어야 열을 뽑을 수 있다)', async () => {
+    const e = await readCourseEntry('2', '산업안전보건교육.xlsx', load('산업안전보건교육.xlsx'));
+    const dropped = dropSheet(e);
+    expect(applyMapping(dropped, { empNo: 0, name: 1, dept: 2, status: 3 })).toBe(dropped);
   });
 });
 

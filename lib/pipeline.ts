@@ -62,6 +62,22 @@ export function applyMapping(entry: FileEntry, mapping: ColumnMapping): FileEntr
   };
 }
 
+/**
+ * 열 고르기를 취소했을 때 읽어 둔 표를 버린다 (DESIGN.md §9: 시트 전체는 열을 고를 때까지만 메모리에 둔다).
+ * 칸은 그대로 "열 고르기 필요" 상태로 남고, 다시 [열 고르기]를 누르면 파일을 새로 읽는다.
+ */
+export function dropSheet(entry: FileEntry): FileEntry {
+  if (entry.status !== 'needsColumns' || !entry.sheet) return entry;
+  return {
+    id: entry.id,
+    fileName: entry.fileName,
+    courseName: entry.courseName,
+    status: 'needsColumns',
+    mapping: entry.mapping,
+    error: entry.error,
+  };
+}
+
 /** [정리하기]를 누를 수 있는 상태인지: 1개 이상이고 전부 ready */
 export function canProcess(entries: readonly FileEntry[]): boolean {
   return entries.length > 0 && entries.every((e) => e.status === 'ready');
