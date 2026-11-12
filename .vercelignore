@@ -1,5 +1,21 @@
-# Vercel에 올리지 않을 파일 (.gitignore에 더해서 적용돼요)
-# 화면을 만드는 데 필요 없고, 개인 작업 기록이나 테스트용 파일이라 올리지 않는다.
+# Vercel에 올리지 않을 파일
+# ※ 중요: .vercelignore 파일이 있으면 Vercel은 .gitignore를 읽지 않고 이 파일만 봅니다.
+#   그래서 .gitignore에 있던 비밀 파일 규칙도 여기에 다시 적어야 합니다.
+
+# 비밀 값 (절대 올리지 않는다)
+.env
+.env.*
+*.pem
+.vercel
+
+# 설치·빌드 결과물 (Vercel이 직접 설치하고 빌드한다)
+node_modules
+.next
+out
+build
+coverage
+*.tsbuildinfo
+npm-debug.log*
 
 # 작업 도구 기록
 .bkit
