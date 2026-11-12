@@ -3,10 +3,10 @@
 > **요약:** PLAN.md의 작업을 어떻게 만들지 정한다. 화면은 한 페이지, 처리는 모두 브라우저 안에서, 결과는 시트 2개짜리 엑셀 파일 하나다.
 >
 > **프로젝트:** my-app (의무교육 수료관리 도우미)
-> **버전:** 0.1.0
+> **버전:** 문서 0.7 / 앱 0.1.0
 > **작성자:** 박지현
 > **작성일:** 2026-11-12
-> **상태:** 초안
+> **상태:** 구현 완료 (Vercel 배포됨)
 > **계획서:** [PLAN.md](PLAN.md) · **기획서:** [PRD.md](PRD.md)
 
 ---
@@ -83,7 +83,7 @@
 ```
 ┌──────────────────────── 브라우저 (운영자 PC) ────────────────────────┐
 │                                                                     │
-│  [화면] app/page.tsx + app/components/*                             │
+│  [화면] app/page.tsx → Workspace.tsx + app/components/*              │
 │     │  파일 선택, 버튼, 안내 메시지, 미리보기                         │
 │     ▼                                                               │
 │  [판정 규칙] lib/*                                                   │
@@ -134,7 +134,9 @@ Vercel은 이 화면(웹 페이지 파일)을 전달하는 역할만 하고, 엑
 | `lib/readExcel.ts` | ExcelJS | 엑셀 파일 읽기 |
 | `lib/buildWorkbook.ts` | ExcelJS | 색칠·수식이 들어간 엑셀 만들기 |
 | `lib/merge.ts`, `lib/judge.ts` | 없음 (순수 계산) | 자동 검사를 쉽게 하기 위해 외부 도구에 기대지 않는다 |
-| `app/page.tsx` | `lib/*` | 화면에서 판정 규칙을 불러 쓴다 |
+| `app/components/Workspace.tsx` | `lib/*` | 화면의 단계 관리(올리기 → 열 고르기 → 정리하기 → 내려받기)를 맡고 판정 규칙을 불러 쓴다. 엑셀 도구가 든 `pipeline.ts`·`buildWorkbook.ts`는 처음 필요할 때 불러와서 첫 화면을 가볍게 한다 |
+| `app/page.tsx` | `Workspace.tsx` | `Workspace`를 그리기만 한다 |
+| 화면 부품 (`FileList`, `ColumnPicker`, `ResultPreview` 등) | `lib/messages.ts`, `lib/statusColors.ts`, `lib/detectColumns.ts` | 엑셀 도구(ExcelJS)를 불러오지 않는 파일만 가져다 쓴다 |
 
 ---
 
@@ -188,12 +190,25 @@ type CourseFile = {
   records: { empNo: string; name: string; dept: string; raw: string }[]; // raw = 원본 수료 여부 값
 };
 
+// 교육 파일 안의 한 줄
+type CourseRecord = { empNo: string; name: string; dept: string; raw: string };
+
 // 통합 시트의 한 줄
 type MergedRow = Employee & {
   courses: Record<string, CourseStatus>;
   overall: OverallStatus;
 };
+
+// 열 찾기: 찾을 열, 열 위치(0부터), 읽은 표 (lib/types.ts)
+type Field = 'empNo' | 'name' | 'dept' | 'status';
+type ColumnMapping = Partial<Record<Field, number>>;
+type RawSheet = { headers: string[]; rows: string[][] }; // 열을 고를 때까지만 메모리에 둔다
+
+// 오류 코드 (§8). E07은 직원 명단 파일이 없어져 쓰지 않는다
+type ErrorCode = 'E01' | 'E02' | 'E03' | 'E04' | 'E05' | 'E06' | 'E08';
 ```
+
+화면에서 파일 한 칸을 나타내는 `FileEntry`(상태: 읽는 중 / 준비됨 / 열 고르기 필요 / 오류)는 `lib/pipeline.ts`에 있다.
 
 ### 4.2 교육 칸 판정 표
 
@@ -298,7 +313,8 @@ type MergedRow = Employee & {
 
 | 부품 | 파일 | 하는 일 |
 |---|---|---|
-| 메인 페이지 | `app/page.tsx` | 단계(올리기 → 열 고르기 → 결과)를 관리하고 부품을 배치 |
+| 메인 페이지 | `app/page.tsx` | `Workspace`를 그리기만 한다 |
+| 화면 전체 흐름 | `app/components/Workspace.tsx` | 단계(올리기 → 열 고르기 → 정리하기 → 결과 → 내려받기)를 관리하고 부품을 배치 |
 | 파일 올리기 칸 | `app/components/FileDropZone.tsx` | 끌어다 놓기·클릭으로 파일 고르기, 형식·용량 검사 결과 표시 |
 | 파일 목록 | `app/components/FileList.tsx` | 올린 파일 이름, 상태(✔/⚠), 빼기 버튼 |
 | 열 고르기 창 | `app/components/ColumnPicker.tsx` | 자동으로 못 찾은 열을 운영자가 고르기 |
@@ -448,16 +464,20 @@ type MergedRow = Employee & {
 ```
 my-app/
 ├─ app/
-│  ├─ page.tsx                 ← 메인 화면 (브라우저 쪽 코드)
-│  ├─ layout.tsx               ← 탭 제목을 "의무교육 수료관리 도우미"로
-│  └─ components/              ← 화면 부품 (6.3 표)
+│  ├─ page.tsx                 ← 메인 페이지 (Workspace를 그림)
+│  ├─ layout.tsx               ← 탭 제목을 "의무교육 수료관리 도우미"로, 언어 ko
+│  ├─ globals.css              ← 전체 글꼴·색
+│  └─ components/              ← 화면 부품 (6.3 표). Workspace.tsx가 전체 흐름
 ├─ lib/
 │  ├─ types.ts                 ← 4.1 데이터 모양
 │  ├─ constants.ts             ← 열 찾기 사전, 색, 제한값(20개·10MB)
+│  ├─ messages.ts              ← 열 이름과 오류 메시지 (엑셀 도구 없이 화면에서 씀)
+│  ├─ statusColors.ts          ← 판정별 색 (엑셀·화면 미리보기가 같이 씀)
 │  ├─ validateFiles.ts         ← 형식·용량·개수 검사
 │  ├─ readExcel.ts             ← 엑셀 읽기, 제목 줄 찾기
 │  ├─ detectColumns.ts         ← 열 자동 찾기
-│  ├─ merge.ts                 ← 사번 기준 합치기
+│  ├─ pipeline.ts              ← 파일 한 개를 읽어 화면 목록 칸(FileEntry)으로 만들기, 고른 열 적용
+│  ├─ merge.ts                 ← 사번 기준 합치기, 인원 집계, 부서별 집계
 │  ├─ judge.ts                 ← 교육 칸·전체 판정
 │  ├─ buildWorkbook.ts         ← 통합·요약 시트 만들기
 │  ├─ download.ts              ← 파일 내려받기
@@ -519,3 +539,4 @@ my-app/
 | 0.4 | 2026-11-12 | 부서별 요약(FR-11) 구현 반영, 부서별 수식을 SUMPRODUCT로 정함 | 박지현 |
 | 0.5 | 2026-11-12 | 화면 미리보기(FR-10) 구현 반영, 판정 색을 statusColors.ts로 공유 | 박지현 |
 | 0.6 | 2026-11-12 | Gap 분석 결과 중 사용자가 문제없다고 확인한 가정을 0.1절에 기록 | 박지현 |
+| 0.7 | 2026-11-12 | 낡은 부분 정리: 파일 구조(§2.3·§6.3·§11)에 Workspace·pipeline·messages·statusColors 반영, §4.1 타입 보충, 머리말 버전·상태 | 박지현 |
