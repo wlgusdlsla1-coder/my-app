@@ -15,6 +15,7 @@ import ColumnPicker from './ColumnPicker';
 import FileDropZone from './FileDropZone';
 import FileList from './FileList';
 import Notice, { type NoticeItem, type NoticeKind } from './Notice';
+import ResultPreview from './ResultPreview';
 import ResultSummary from './ResultSummary';
 
 type Result = { merged: MergeResult; summary: Summary };
@@ -196,6 +197,10 @@ export default function Workspace() {
             ② 결과
           </h2>
           <ResultSummary summary={result.summary} courseCount={result.merged.courseNames.length} onDownload={handleDownload} downloading={downloading} />
+          <h3 className="pt-2 text-base font-semibold">
+            미리보기 <span className="text-sm font-normal text-zinc-500">(내려받는 엑셀의 통합 시트와 같은 내용이에요)</span>
+          </h3>
+          <ResultPreview merged={result.merged} />
         </section>
       )}
 

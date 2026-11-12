@@ -3,21 +3,7 @@
 import ExcelJS from 'exceljs';
 import { COLORS, SHEET_NAMES } from './constants';
 import { deptLabel, summarize, summarizeByDept, type MergeResult } from './merge';
-import type { CourseStatus, OverallStatus } from './types';
-
-/** 교육 칸 판정 → 배경색 (DESIGN.md §4.2). 수료는 색 없음 */
-const COURSE_FILL: Partial<Record<CourseStatus, string>> = {
-  미수료: COLORS.red,
-  '교육 기록 없음': COLORS.yellow,
-  '확인 필요': COLORS.gray,
-};
-
-/** 전체 수료 여부 → 배경색 (DESIGN.md §4.3). 수료는 색 없음 */
-const OVERALL_FILL: Partial<Record<OverallStatus, string>> = {
-  미수료: COLORS.red,
-  '미수료(교육기록 미흡)': COLORS.yellow,
-  '확인 필요': COLORS.gray,
-};
+import { COURSE_FILL, OVERALL_FILL } from './statusColors';
 
 function fillOf(argb: string | undefined): ExcelJS.Fill | undefined {
   return argb ? { type: 'pattern', pattern: 'solid', fgColor: { argb } } : undefined;

@@ -291,7 +291,7 @@ type MergedRow = Employee & {
 | 파일 목록 | `app/components/FileList.tsx` | 올린 파일 이름, 상태(✔/⚠), 빼기 버튼 |
 | 열 고르기 창 | `app/components/ColumnPicker.tsx` | 자동으로 못 찾은 열을 운영자가 고르기 |
 | 결과 요약 | `app/components/ResultSummary.tsx` | 인원 숫자, 합계 일치 여부, 내려받기 버튼 |
-| 미리보기 표 (nice) | `app/components/ResultPreview.tsx` | 통합 결과를 색칠된 표로 보여주기 |
+| 미리보기 표 (nice, 구현 완료) | `app/components/ResultPreview.tsx` | 통합 결과를 엑셀과 같은 열 순서·같은 색으로 보여주기. 처음 100명만 그리고 [100명 더 보기]·[전체 보기]로 늘림. 색은 `lib/statusColors.ts`를 엑셀과 함께 씀 |
 | 안내 메시지 | `app/components/Notice.tsx` | 오류·주의·완료 메시지 |
 
 ### 6.4 화면 확인 목록
@@ -505,3 +505,4 @@ my-app/
 | 0.2 | 2026-11-12 | D-1~D-3 확정, PRD에 반영 | 박지현 |
 | 0.3 | 2026-11-12 | 직원 명단 파일 없음(D-4), D-3·E07 없앰, 사용자 샘플 양식 반영 | 박지현 |
 | 0.4 | 2026-11-12 | 부서별 요약(FR-11) 구현 반영, 부서별 수식을 SUMPRODUCT로 정함 | 박지현 |
+| 0.5 | 2026-11-12 | 화면 미리보기(FR-10) 구현 반영, 판정 색을 statusColors.ts로 공유 | 박지현 |
